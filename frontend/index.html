@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ResearchMind — Autonomous AI Research Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','ui-sans-serif','system-ui']},colors:{brand:{50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca'}}}}}</script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="h-full bg-slate-50 font-sans text-slate-800">
+<div class="flex h-full">
+
+  <!-- Sidebar -->
+  <aside class="hidden md:flex w-64 shrink-0 flex-col bg-slate-900 text-slate-300">
+    <div class="px-6 py-5 flex items-center gap-3 border-b border-slate-800">
+      <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-brand-500 to-fuchsia-500 grid place-items-center text-white font-bold">R</div>
+      <div><div class="text-white font-semibold leading-tight">ResearchMind</div><div class="text-xs text-slate-400">AI Research Agent</div></div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1" id="nav">
+      <button data-view="discover" class="nav-btn">🔎 Discover</button>
+      <button data-view="feed" class="nav-btn">⚡ Live Feed</button>
+      <button data-view="agent" class="nav-btn">🤖 Research Agent</button>
+      <button data-view="library" class="nav-btn">📚 Library &amp; Editor</button>
+      <button data-view="ask" class="nav-btn">💬 Ask Your Papers</button>
+    </nav>
+    <div class="p-4 border-t border-slate-800 text-xs" id="llm-status">Connecting…</div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-1 overflow-y-auto">
+    <!-- mobile nav -->
+    <div class="md:hidden flex gap-2 overflow-x-auto p-3 bg-slate-900" id="nav-m">
+      <button data-view="discover" class="chip-nav">Discover</button><button data-view="feed" class="chip-nav">Feed</button>
+      <button data-view="agent" class="chip-nav">Agent</button><button data-view="library" class="chip-nav">Library</button>
+      <button data-view="ask" class="chip-nav">Ask</button>
+    </div>
+    <div class="max-w-6xl mx-auto px-5 py-8">
+
+      <!-- DISCOVER -->
+      <section id="view-discover" class="view">
+        <h1 class="h1">Discover research</h1>
+        <p class="sub">Search journals, conferences, preprints, blogs and Medium in one place.</p>
+        <div class="card p-4 mt-5">
+          <div class="flex gap-3">
+            <input id="d-query" class="input flex-1" placeholder="e.g. retrieval augmented generation for long documents">
+            <button id="d-go" class="btn-primary">Search</button>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+            <label class="lbl">Source<select id="d-source" class="input"></select></label>
+            <label class="lbl">Published in (type)<select id="d-vtype" class="input"></select></label>
+            <label class="lbl">Journal / Conference / Medium<select id="d-venue" class="input"></select></label>
+            <label class="lbl">Sort by<select id="d-sort" class="input"></select></label>
+            <label class="lbl">Year from<select id="d-yfrom" class="input"></select></label>
+            <label class="lbl">Year to<select id="d-yto" class="input"></select></label>
+            <label class="lbl">Results<select id="d-limit" class="input"><option>10</option><option>15</option><option>25</option></select></label>
+          </div>
+        </div>
+        <div id="d-warn" class="mt-3"></div>
+        <div id="d-results" class="mt-5 space-y-3"></div>
+      </section>
+
+      <!-- LIVE FEED -->
+      <section id="view-feed" class="view hidden">
+        <div class="flex items-end justify-between flex-wrap gap-3">
+          <div><h1 class="h1">Live feed <span class="live">● LIVE</span></h1><p class="sub">Newest AI/ML papers from arXiv plus top blogs &amp; Medium. Auto-refreshes every minute.</p></div>
+          <div class="flex gap-2 items-center">
+            <select id="f-cat" class="input w-44"><option value="all">All sources</option><option value="preprints">Preprints (arXiv)</option><option value="blogs">Blogs &amp; Medium</option></select>
+            <select id="f-vtype" class="input w-40"></select>
+            <button id="f-refresh" class="btn-ghost">Refresh</button>
+          </div>
+        </div>
+        <div class="text-xs text-slate-500 mt-2" id="f-updated"></div>
+        <div id="f-warn" class="mt-2"></div>
+        <div id="f-results" class="mt-4 space-y-3"></div>
+      </section>
+
+      <!-- AGENT -->
+      <section id="view-agent" class="view hidden">
+        <h1 class="h1">Autonomous research agent</h1>
+        <p class="sub">Give it a goal. It plans searches, reads abstracts, writes a cited brief, then fact-checks itself.</p>
+        <div class="card p-4 mt-5">
+          <textarea id="a-goal" rows="3" class="input" placeholder="e.g. What are the latest approaches to reducing hallucinations in LLMs, and what gaps remain?"></textarea>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3">
+            <label class="lbl">Source<select id="a-source" class="input"></select></label>
+            <label class="lbl">Published in<select id="a-vtype" class="input"></select></label>
+            <label class="lbl">Year from<select id="a-yfrom" class="input"></select></label>
+            <label class="lbl">Year to<select id="a-yto" class="input"></select></label>
+            <label class="lbl">Papers to read<select id="a-depth" class="input"><option>3</option><option selected>5</option><option>8</option></select></label>
+          </div>
+          <button id="a-go" class="btn-primary mt-4">Run agent</button>
+        </div>
+        <div id="a-out" class="mt-6"></div>
+      </section>
+
+      <!-- LIBRARY -->
+      <section id="view-library" class="view hidden">
+        <h1 class="h1">Library &amp; editor</h1>
+        <p class="sub">Drop PDFs to ingest them, then review, edit and export.</p>
+        <div id="dropzone" class="dropzone mt-5">
+          <input type="file" id="file-input" accept="application/pdf" multiple class="hidden">
+          <div class="text-3xl">📄</div>
+          <div class="font-medium mt-1">Drag &amp; drop PDF files here, or <span class="text-brand-600 underline cursor-pointer" id="browse">browse</span></div>
+          <div class="text-xs text-slate-500 mt-1">Metadata is detected automatically — you can edit it afterwards.</div>
+          <div id="upload-status" class="text-sm mt-2"></div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5">
+          <label class="lbl">Search<input id="l-q" class="input" placeholder="title, author, venue"></label>
+          <label class="lbl">Year<select id="l-year" class="input"></select></label>
+          <label class="lbl">Published in<select id="l-vtype" class="input"></select></label>
+          <label class="lbl">Origin<select id="l-source" class="input"><option value="">Any</option><option value="upload">Uploaded PDF</option><option value="search">Saved from search</option><option value="agent-report">Agent report</option></select></label>
+        </div>
+        <div id="l-list" class="mt-4 card divide-y divide-slate-100"></div>
+      </section>
+
+      <!-- ASK -->
+      <section id="view-ask" class="view hidden">
+        <h1 class="h1">Ask your papers</h1>
+        <p class="sub">Retrieval-augmented Q&amp;A with citations over your library. Select papers to narrow the scope.</p>
+        <div class="grid md:grid-cols-3 gap-4 mt-5">
+          <div class="card p-3 md:col-span-1 max-h-96 overflow-y-auto" id="ask-list"></div>
+          <div class="md:col-span-2">
+            <div class="card p-4">
+              <textarea id="ask-q" rows="3" class="input" placeholder="e.g. Which datasets were used and what were the main limitations?"></textarea>
+              <button id="ask-go" class="btn-primary mt-3">Ask</button>
+            </div>
+            <div id="ask-out" class="mt-4"></div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- EDITOR MODAL -->
+<div id="editor" class="fixed inset-0 z-40 hidden bg-slate-900/60 p-3 md:p-6">
+  <div class="bg-white rounded-2xl shadow-2xl h-full max-w-7xl mx-auto flex flex-col overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-3 border-b">
+      <div class="font-semibold">Paper editor</div>
+      <div class="flex gap-2">
+        <button id="e-export" class="btn-ghost">Export .md</button>
+        <button id="e-delete" class="btn-danger">Delete</button>
+        <button id="e-save" class="btn-primary">Save changes</button>
+        <button id="e-close" class="btn-ghost">✕</button>
+      </div>
+    </div>
+    <div class="flex-1 grid lg:grid-cols-5 min-h-0">
+      <div class="lg:col-span-3 p-5 overflow-y-auto space-y-3 border-r">
+        <label class="lbl">Title<input id="e-title" class="input"></label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="lbl">Authors<input id="e-authors" class="input"></label>
+          <label class="lbl">Venue (journal / conference / site)<input id="e-venue" class="input"></label>
+          <label class="lbl">Year<select id="e-year" class="input"></select></label>
+          <label class="lbl">Published in (type)<select id="e-vtype" class="input"></select></label>
+        </div>
+        <label class="lbl">Abstract<textarea id="e-abstract" rows="3" class="input"></textarea></label>
+        <label class="lbl">Notes<textarea id="e-notes" rows="2" class="input"></textarea></label>
+        <label class="lbl">Full text <span class="text-slate-400 font-normal">(select text to apply AI edits to just that part)</span>
+          <textarea id="e-content" rows="16" class="input font-mono text-xs leading-relaxed"></textarea></label>
+      </div>
+      <div class="lg:col-span-2 p-5 overflow-y-auto bg-slate-50">
+        <div class="flex gap-2 mb-4">
+          <button class="tab tab-on" data-tab="review">AI review</button>
+          <button class="tab" data-tab="edit">AI edit</button>
+          <button class="tab" data-tab="versions">Versions</button>
+        </div>
+        <div id="tab-review" class="tabp">
+          <div class="flex gap-2"><button id="e-review" class="btn-primary">Run peer review</button><button id="e-summ" class="btn-ghost">Summarize</button></div>
+          <div id="e-review-out" class="mt-4"></div>
+        </div>
+        <div id="tab-edit" class="tabp hidden">
+          <select id="e-preset" class="input mb-2">
+            <option value="">Quick instructions…</option>
+            <option>Improve clarity and academic tone</option>
+            <option>Fix grammar and spelling only</option>
+            <option>Shorten by about 30% without losing key points</option>
+            <option>Rewrite the abstract to be more concise and impactful</option>
+            <option>Strengthen the limitations discussion</option>
+          </select>
+          <textarea id="e-instr" rows="3" class="input" placeholder="Describe the change you want…"></textarea>
+          <button id="e-aiedit" class="btn-primary mt-2">Generate edit</button>
+          <div id="e-edit-out" class="mt-4"></div>
+        </div>
+        <div id="tab-versions" class="tabp hidden"><div id="e-versions"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-5 right-5 z-50 hidden px-4 py-2 rounded-lg text-sm text-white shadow-lg"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
