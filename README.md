@@ -12,9 +12,9 @@ peer-reviewed journals, conference papers, preprints, blogs and Medium articles 
 | 🧪 **AI Peer Review** | Reviewer agent returns strengths, weaknesses, novelty/rigor/clarity scores, recommendation, suggestions. |
 | 💬 **Ask Your Papers** | RAG (ChromaDB) Q&A with numbered citations over your library. |
 
-## 2. Setup — step by step 
+## 2. Step By Step: SetUp
 
-1. **Create a virtual environment** (VS Code terminal: `` Ctrl+` ``):
+1. **Create a virtual environment**
    ```bash
    python -m venv .venv
    ```
